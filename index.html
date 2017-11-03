@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Mandelbrot Visualization</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+            body {
+                text-align: left;
+                //font-size: 75%px;
+                font-family: verdana, arial, 'sans sherif';
+                margin: 0px auto;
+                width: 80%;
+                background-color: #009999;
+            }
+            h1 { font-size: 140%; text-align: center;}
+
+            #game {
+                background-color: #00DDDD;
+                width: 1050;
+                display: block;
+                margin: auto;
+                border-style: solid;
+                border-width: 2px;
+                outline: none;
+                -webkit-tap-highlight-color: rgba(255, 255, 255, 0);
+            }
+
+            #content {
+                background-color: #33FFFF;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="content">
+            <canvas id="game" width="1050" height="600" tabindex="0" oncontextmenu="return false;"></canvas>
+            <div><br><br><br></div>
+
+            <script src="scripts/application.js"></script>
+        </div>
+    </body>
+</html>
