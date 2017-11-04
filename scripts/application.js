@@ -12,13 +12,13 @@ var mousePressed = false;
 var click;
 
 // zoom variables
-var ratio = canvas.height / canvas.width;
-var width = 3.5;
-var height = ratio * width;
-var coordLeft = -2.5;
-var coordRight = coordLeft + width;
-var coordBottom = -1;
-var coordTop = coordBottom + height;
+var ratio = Big(canvas.height / canvas.width);
+var width = Big(3.5);
+var height = ratio.times(width);
+var coordLeft = Big(-2.5);
+var coordRight = coordLeft.plus(width);
+var coordBottom = Big(-1);
+var coordTop = coordBottom.plus(height);
 
 var currentImage;
 var maxIteration = 1000;
@@ -26,12 +26,12 @@ var maxIteration = 1000;
 drawFractal();
 
 function reset() {
-    width = 3.5;
-    height = ratio * width;
-    coordLeft = -2.5;
-    coordRight = coordLeft + width;
-    coordBottom = -1;
-    coordTop = coordBottom + height;
+    width = Big(3.5);
+    height = ratio.times(width);
+    coordLeft = Big(-2.5);
+    coordRight = coordLeft.plus(width);
+    coordBottom = Big(-1);
+    coordTop = coordBottom.plus(height);
     maxIteration = 1000;
     drawFractal();
 }
@@ -46,7 +46,7 @@ function drawFractal() {
 
             var iteration = 0;
             var c = new Complex();
-            while (iteration < maxIteration && c.magnitudeSquared() < 4) {
+            while (iteration < maxIteration && c.magnitudeSquared().lt(4)) {
                 c.square();
                 c.add(pos);
                 iteration++;
@@ -69,11 +69,11 @@ function drawRect(rect) {
 
 function zoom(rect) {    
     width = rect.width;
-    height = ratio * width;
+    height = ratio.times(width);
     coordLeft = rect.x;
-    coordRight = coordLeft + width;
+    coordRight = coordLeft.plus(width);
     coordBottom = rect.y;
-    coordTop = coordBottom + height;
+    coordTop = coordBottom.plus(height);
     maxIteration = 1000;
     drawFractal();
 }
@@ -108,18 +108,6 @@ function eventToPixel(event) {
 }
 
 function clicksToRect(click1, click2) {
-    /*var rect = {x: Math.min(click1.x, click2.x), y: Math.min(click1.y, click2.y)};
-    rect.width = Math.max(click1.x, click2.x) - rect.x;
-    rect.height = Math.max(click1.y, click2.y) - rect.y;
-    
-    if (rect.width * ratio > rect.height) {
-        rect.height = rect.width * ratio;
-    } else if (rect.width * ratio < rect.height) {
-        rect.width = rect.height / ratio;
-    }
-    
-    return rect;
-    */
     var rect = {width: Math.abs(click1.x - click2.x),
                 height: Math.abs(click1.y - click2.y)};
     
@@ -146,18 +134,18 @@ function clicksToRect(click1, click2) {
 
 function rectToWorld(rect) {
     var topLeft = pixelToWorld(rect);
-    var h = rect.height * height / canvas.height;
+    var h = height.times(rect.height).div(canvas.height);
     return {
         x: topLeft.x,
-        y: topLeft.y - h,
-        width: rect.width * width / canvas.width,
+        y: topLeft.y.minus(h),
+        width: width.times(rect.width).div(canvas.width),
         height: h
     };
 }
 
 function pixelToWorld(coords) {
-    return {x: coordLeft + (coords.x / canvas.width) * width,
-            y: coordTop - (coords.y / canvas.height) * height};
+    return {x: coordLeft.plus(Big(coords.x / canvas.width).times(width)),
+            y: coordTop.minus(Big(coords.y / canvas.height).times(height))};
 }
 
 function palette(iteration) {
@@ -212,26 +200,26 @@ function hslToRgb(h, s, l){
 function Complex(r, i) {
     if (i === undefined) {
         if (r === undefined) {
-            this.real = 0.0;
-            this.imaginary = 0.0;
+            this.real = Big(0.0);
+            this.imaginary = Big(0.0);
         } else {
-            this.real = r.x;
-            this.imaginary = r.y;
+            this.real = Big(r.x);
+            this.imaginary = Big(r.y);
         }
     } else {
-        this.real = r;
-        this.imaginary = i;
+        this.real = Big(r);
+        this.imaginary = Big(i);
     }
     this.add = function(other) {
-        this.real += other.real;
-        this.imaginary += other.imaginary;
+        this.real = this.real.plus(other.real);
+        this.imaginary = this.imaginary.plus(other.imaginary);
     };
     this.square = function() {
         var tmp = this.real;
-        this.real = this.real * this.real - this.imaginary * this.imaginary;
-        this.imaginary *= 2 * tmp;
+        this.real = this.real.pow(2).minus(this.imaginary.pow(2));
+        this.imaginary = this.imaginary.times(tmp.times(2));
     };
     this.magnitudeSquared = function() {
-        return this.real * this.real + this.imaginary * this.imaginary;
+        return this.real.pow(2).plus(this.imaginary.pow(2));
     };
 };
