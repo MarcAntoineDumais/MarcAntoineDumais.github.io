@@ -37,25 +37,47 @@ function reset() {
 }
 
 function drawFractal() {
+    var t0 = performance.now();
     canvas.width = canvas.width;
 
     for (var py = 0; py < canvas.height; py++) {
         for (var px = 0; px < canvas.width; px++) {
             var worldCoord = pixelToWorld({x: px, y: py});
-            var pos = new Complex(worldCoord);
+            var x = worldCoord.x;
+            var y = worldCoord.y;
 
-            var iteration = 0;
-            var c = new Complex();
-            while (iteration < maxIteration && c.magnitudeSquared() < 4) {
-                c.square();
-                c.add(pos);
-                iteration++;
+            var iteration = maxIteration;
+            var p = Math.sqrt(Math.pow(x - .25, 2) + y*y);
+            if (x >= p - 2*p*p + 0.25 ||
+                (x+1)*(x+1) + y * y >= 1/16.0) {
+                iteration = escapeTimeAlgorithm(x, y);
             }
+            
             ctx.fillStyle = palette(iteration);
             ctx.fillRect(px, py, 1, 1);
         }
     }
     currentImage = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    var t1 = performance.now();
+    console.log("Call to drawFractal took " + (t1 - t0) + " milliseconds.");
+}
+
+function escapeTimeAlgorithm(cx, cy) {
+    var iteration = 0;
+    var x = 0.0;
+    var y = 0.0;
+    var tmpX, tmpY;
+    while (iteration < maxIteration && x*x + y*y < 4) {
+        tmpX = x;
+        tmpY = y;
+        x = x*x - y*y + cx;
+        y = 2*tmpX*y + cy;
+        if (x == tmpX && y == tmpY) {
+            return maxIteration;
+        }
+        iteration++;
+    }
+    return iteration;
 }
 
 function drawRect(rect) {
@@ -108,18 +130,6 @@ function eventToPixel(event) {
 }
 
 function clicksToRect(click1, click2) {
-    /*var rect = {x: Math.min(click1.x, click2.x), y: Math.min(click1.y, click2.y)};
-    rect.width = Math.max(click1.x, click2.x) - rect.x;
-    rect.height = Math.max(click1.y, click2.y) - rect.y;
-    
-    if (rect.width * ratio > rect.height) {
-        rect.height = rect.width * ratio;
-    } else if (rect.width * ratio < rect.height) {
-        rect.width = rect.height / ratio;
-    }
-    
-    return rect;
-    */
     var rect = {width: Math.abs(click1.x - click2.x),
                 height: Math.abs(click1.y - click2.y)};
     
@@ -208,30 +218,3 @@ function hslToRgb(h, s, l){
 
     return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
 }
-
-function Complex(r, i) {
-    if (i === undefined) {
-        if (r === undefined) {
-            this.real = 0.0;
-            this.imaginary = 0.0;
-        } else {
-            this.real = r.x;
-            this.imaginary = r.y;
-        }
-    } else {
-        this.real = r;
-        this.imaginary = i;
-    }
-    this.add = function(other) {
-        this.real += other.real;
-        this.imaginary += other.imaginary;
-    };
-    this.square = function() {
-        var tmp = this.real;
-        this.real = this.real * this.real - this.imaginary * this.imaginary;
-        this.imaginary *= 2 * tmp;
-    };
-    this.magnitudeSquared = function() {
-        return this.real * this.real + this.imaginary * this.imaginary;
-    };
-};
