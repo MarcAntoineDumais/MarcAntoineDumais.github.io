@@ -1,22 +1,48 @@
-//canvas stuff
+// canvas stuff
 var canvas = document.getElementById("game");
 var ctx = canvas.getContext("2d");
-//canvas.addEventListener("mousedown", mouseDown, true);
-//canvas.focus();
 
+// events
+canvas.addEventListener("mousedown", mouseDown, true);
+canvas.addEventListener("mouseup", mouseUp, true);
+canvas.addEventListener("mousemove", mouseMove, true);
+document.getElementById("reset").onclick = reset;
+
+var mousePressed = false;
+var click;
+
+// zoom variables
+var ratio = canvas.height / canvas.width;
+var width = 3.5;
+var height = ratio * width;
+var coordLeft = -2.5;
+var coordRight = coordLeft + width;
+var coordBottom = -1;
+var coordTop = coordBottom + height;
+
+var currentImage;
 var maxIteration = 1000;
 
-draw();
+drawFractal();
 
-function draw() {
+function reset() {
+    width = 3.5;
+    height = ratio * width;
+    coordLeft = -2.5;
+    coordRight = coordLeft + width;
+    coordBottom = -1;
+    coordTop = coordBottom + height;
+    maxIteration = 1000;
+    drawFractal();
+}
+
+function drawFractal() {
     canvas.width = canvas.width;
 
     for (var py = 0; py < canvas.height; py++) {
         for (var px = 0; px < canvas.width; px++) {
-            // scaled coordinates. x in (-2.5, 1). y in (-1, 1)
-            var x = -2.5 + (px / canvas.width) * 3.5;
-            var y = 1 - (py / canvas.height) * 2;
-            var pos = new Complex(x, y);
+            var worldCoord = pixelToWorld({x: px, y: py});
+            var pos = new Complex(worldCoord);
 
             var iteration = 0;
             var c = new Complex();
@@ -29,6 +55,109 @@ function draw() {
             ctx.fillRect(px, py, 1, 1);
         }
     }
+    currentImage = ctx.getImageData(0, 0, canvas.width, canvas.height);
+}
+
+function drawRect(rect) {
+    canvas.width = canvas.width;
+    ctx.putImageData(currentImage, 0, 0);
+    ctx.lineWidth="4";
+    ctx.strokeStyle = "rgba(255, 187, 0, 1)";
+    ctx.rect(rect.x, rect.y, rect.width, rect.height);
+    ctx.stroke();
+}
+
+function zoom(rect) {    
+    width = rect.width;
+    height = ratio * width;
+    coordLeft = rect.x;
+    coordRight = coordLeft + width;
+    coordBottom = rect.y;
+    coordTop = coordBottom + height;
+    maxIteration = 1000;
+    drawFractal();
+}
+
+function mouseDown(event) {
+    event.preventDefault();
+    canvas.focus();
+
+    click = eventToPixel(event);
+    mousePressed = true;
+}
+
+function mouseUp(event) {
+    if (mousePressed) {
+        zoom(rectToWorld(clicksToRect(click, eventToPixel(event))));
+    }
+    mousePressed = false;
+}
+
+function mouseMove(event) {
+    if (mousePressed) {
+        drawRect(clicksToRect(click, eventToPixel(event)));
+    }
+}
+
+function eventToPixel(event) {
+    var rect = canvas.getBoundingClientRect();
+    var x = Math.floor((event.clientX-rect.left)/(rect.right-rect.left)*canvas.width);
+    var y = Math.floor((event.clientY-rect.top)/(rect.bottom-rect.top)*canvas.height);
+
+    return {x: x, y: y};
+}
+
+function clicksToRect(click1, click2) {
+    /*var rect = {x: Math.min(click1.x, click2.x), y: Math.min(click1.y, click2.y)};
+    rect.width = Math.max(click1.x, click2.x) - rect.x;
+    rect.height = Math.max(click1.y, click2.y) - rect.y;
+    
+    if (rect.width * ratio > rect.height) {
+        rect.height = rect.width * ratio;
+    } else if (rect.width * ratio < rect.height) {
+        rect.width = rect.height / ratio;
+    }
+    
+    return rect;
+    */
+    var rect = {width: Math.abs(click1.x - click2.x),
+                height: Math.abs(click1.y - click2.y)};
+    
+    if (rect.width * ratio > rect.height) {
+        rect.height = rect.width * ratio;
+    } else if (rect.width * ratio < rect.height) {
+        rect.width = rect.height / ratio;
+    }
+    
+    if (click1.x < click2.x) {
+        rect.x = click1.x;
+    } else {
+        rect.x = click1.x - rect.width;
+    }
+    
+    if (click1.y < click2.y) {
+        rect.y = click1.y;
+    } else {
+        rect.y = click1.y - rect.height;
+    }
+    
+    return rect;
+}
+
+function rectToWorld(rect) {
+    var topLeft = pixelToWorld(rect);
+    var h = rect.height * height / canvas.height;
+    return {
+        x: topLeft.x,
+        y: topLeft.y - h,
+        width: rect.width * width / canvas.width,
+        height: h
+    };
+}
+
+function pixelToWorld(coords) {
+    return {x: coordLeft + (coords.x / canvas.width) * width,
+            y: coordTop - (coords.y / canvas.height) * height};
 }
 
 function palette(iteration) {
@@ -43,32 +172,6 @@ function palette(iteration) {
         return "rgba(" + rb + ", " + 255 + ", " + rb + ", 1)";
     }
 }
-
-function Complex(r, i) {
-    this.real = r === undefined ? 0.0 : r;
-    this.imaginary = i === undefined ? 0.0 : i;
-    this.add = function(other) {
-        this.real += other.real;
-        this.imaginary += other.imaginary;
-    };
-    this.square = function() {
-        var tmp = this.real;
-        this.real = this.real * this.real - this.imaginary * this.imaginary;
-        this.imaginary *= 2 * tmp;
-    };
-    this.magnitudeSquared = function() {
-        return this.real * this.real + this.imaginary * this.imaginary;
-    };
-};
-
-/*
-function mouseDown(event) {
-    event.preventDefault();
-    canvas.focus();
-    for (var i = 0; i < states.length; i++)
-        states[i].mouseDown(event);
-}
-*/
 
 /**
  * Converts an HSL color value to RGB. Conversion formula
@@ -105,3 +208,30 @@ function hslToRgb(h, s, l){
 
     return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
 }
+
+function Complex(r, i) {
+    if (i === undefined) {
+        if (r === undefined) {
+            this.real = 0.0;
+            this.imaginary = 0.0;
+        } else {
+            this.real = r.x;
+            this.imaginary = r.y;
+        }
+    } else {
+        this.real = r;
+        this.imaginary = i;
+    }
+    this.add = function(other) {
+        this.real += other.real;
+        this.imaginary += other.imaginary;
+    };
+    this.square = function() {
+        var tmp = this.real;
+        this.real = this.real * this.real - this.imaginary * this.imaginary;
+        this.imaginary *= 2 * tmp;
+    };
+    this.magnitudeSquared = function() {
+        return this.real * this.real + this.imaginary * this.imaginary;
+    };
+};
